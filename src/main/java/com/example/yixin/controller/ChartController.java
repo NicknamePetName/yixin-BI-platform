@@ -257,10 +257,12 @@ public class ChartController {
         userInput.append("分析需求:").append("\n");
         userInput.append(goal).append("\n");
 
-        if (StringUtils.isNotBlank(chartType)) {
-            userInput.append("图表类型:").append("\n");
-            userInput.append(chartType).append("\n");
+        if (StringUtils.isBlank(chartType)) {
+            genChartByAiRequest.setChartType("条形图");
+            chartType = genChartByAiRequest.getChartType();
         }
+        userInput.append("图表类型:").append("\n");
+        userInput.append(chartType).append("\n");
 
         userInput.append("原始数据:").append("\n");
 
@@ -367,10 +369,12 @@ public class ChartController {
         userInput.append("分析需求:").append("\n");
         userInput.append(goal).append("\n");
 
-        if (StringUtils.isNotBlank(chartType)) {
-            userInput.append("图表类型:").append("\n");
-            userInput.append(chartType).append("\n");
+        if (StringUtils.isBlank(chartType)) {
+            genChartByAiRequest.setChartType("条形图");
+            chartType = genChartByAiRequest.getChartType();
         }
+        userInput.append("图表类型:").append("\n");
+        userInput.append(chartType).append("\n");
 
         userInput.append("原始数据:").append("\n");
 
@@ -429,8 +433,6 @@ public class ChartController {
 
 
         AiResponseVO aiResponseVO = new AiResponseVO();
-//        aiResponseVO.setGenChart(genChart);
-//        aiResponseVO.setGenResult(genResult);
         aiResponseVO.setChartId(chart.getId());
 
         return ResultUtils.success(aiResponseVO);

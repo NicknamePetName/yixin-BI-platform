@@ -30,7 +30,7 @@ public class AzureOpenAI {
             "原始数据：\n" +
             "{csv格式的原始数据，用,作为分隔符}\n" +
             "图表类型：\n" +
-            "{指定的图表类型(未指定，默认条形图)}\n" +
+            "{指定的图表类型}\n" +
             "请根据这两部分内容，按照以下指定格式生成内容（此外不要输出任何多余的开头、结尾、注释）\n" +
             "【【【【【\n" +
             "{Echarts V5 的option配置对象代码(并转换为json格式，以便于JSON.parse函数的解析,不要生成option=)，需要表名，合理地将数据进行可视化，不要生成任何多余的内容注释}\n" +
@@ -60,7 +60,7 @@ public class AzureOpenAI {
             result = result.substring(1, result.length() - 1);
         }
 
-        System.out.println(result);
+//        System.out.println(result);
 
         return result;
     }
