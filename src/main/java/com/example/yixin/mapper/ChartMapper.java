@@ -2,6 +2,11 @@ package com.example.yixin.mapper;
 
 import com.example.yixin.model.entity.Chart;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+import java.util.Map;
+
 
 /**
 * @author 亦-Nickname
@@ -10,6 +15,12 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 * @Entity generator.domain.Chart
 */
 public interface ChartMapper extends BaseMapper<Chart> {
+    /**
+     * @param chartId
+     * @return
+     */
+    List<Map<String, Object>> queryChartData(String chartId);
+
 
 }
 

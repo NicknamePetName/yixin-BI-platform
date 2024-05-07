@@ -1,23 +1,16 @@
-package com.example.yixin.model.dto.chart;
-
+package com.example.yixin.controller;
 
 import lombok.Data;
 
 import java.io.Serializable;
 
-
 /**
- * 创建请求
+ * 文件上传请求
  *
  * @author 亦-Nickname
  */
 @Data
-public class ChartAddRequest implements Serializable {
-
-    /**
-     * 分析目标
-     */
-    private String goal;
+public class GenChartByAiRequest implements Serializable {
 
     /**
      * 图标名称
@@ -25,12 +18,12 @@ public class ChartAddRequest implements Serializable {
     private String name;
 
     /**
-     * 图表数据
+     * 图标目标
      */
-    private String chartData;
+    private String goal;
 
     /**
-     * 图表类型
+     * 图标类型
      */
     private String chartType;
 
