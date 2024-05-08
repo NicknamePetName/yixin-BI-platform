@@ -127,6 +127,14 @@
             <artifactId>azure-ai-openai</artifactId>
             <version>1.0.0-beta.3</version> <!-- 请使用最新的版本号 -->
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.rabbitmq/amqp-client -->
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>5.21.0</version>
+        </dependency>
+
     </dependencies>
 
     <build>
