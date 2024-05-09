@@ -21,6 +21,7 @@ import com.example.yixin.model.dto.chart.ChartEditRequest;
 import com.example.yixin.model.dto.chart.ChartQueryRequest;
 import com.example.yixin.model.dto.chart.ChartUpdateRequest;
 import com.example.yixin.model.vo.AiResponseVO;
+import com.example.yixin.mq.BiMessageProducer;
 import com.example.yixin.service.ChartService;
 import com.example.yixin.service.UserService;
 
@@ -61,6 +62,9 @@ public class ChartController {
 
     @Autowired
     private ThreadPoolExecutor threadPoolExecutor;
+
+    @Autowired
+    private BiMessageProducer biMessageProducer;
 
     @Resource
     private ChartService chartService;
@@ -251,7 +255,7 @@ public class ChartController {
         User loginUser = userService.getLoginUser(request);
 
 
-        long modelID = 1659171950288818178L;
+        long modelID = CommonConstant.BI_MODEL_ID;
         // 用户输入
         StringBuilder userInput = new StringBuilder();
         userInput.append("分析需求:").append("\n");
@@ -268,7 +272,7 @@ public class ChartController {
 
         // 压缩后的数据
         String csvData = ExcelUtils.excelToCsv(multipartFile);
-        userInput.append("数据:").append(csvData).append("\n");
+        userInput.append(csvData).append("\n");
         // 知识星球 AI 模型
 //        String result = aiManager.doChat(modelID, userInput.toString());
 
@@ -303,8 +307,6 @@ public class ChartController {
         aiResponseVO.setChartId(chart.getId());
 
         return ResultUtils.success(aiResponseVO);
-
-
 
 
 //        // 读取到用户上传的 excel 文件,进行一个处理
@@ -363,7 +365,7 @@ public class ChartController {
         User loginUser = userService.getLoginUser(request);
 
 
-        long modelID = 1659171950288818178L;
+        long modelID = CommonConstant.BI_MODEL_ID;
         // 用户输入
         StringBuilder userInput = new StringBuilder();
         userInput.append("分析需求:").append("\n");
@@ -380,7 +382,7 @@ public class ChartController {
 
         // 压缩后的数据
         String csvData = ExcelUtils.excelToCsv(multipartFile);
-        userInput.append("数据:").append(csvData).append("\n");
+        userInput.append(csvData).append("\n");
 
 
         // 插入数据库
@@ -438,6 +440,74 @@ public class ChartController {
         return ResultUtils.success(aiResponseVO);
     }
 
+    /**
+     * 智能分析(RabbitMq)
+     *
+     * @param multipartFile
+     * @param genChartByAiRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/gen/async/mq")
+    public BaseResponse<AiResponseVO> getChartByAiAsyncMq(@RequestPart("file") MultipartFile multipartFile,
+                                                        GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
+        String name = genChartByAiRequest.getName();
+        String goal = genChartByAiRequest.getGoal();
+        String chartType = genChartByAiRequest.getChartType();
+        // 校验
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
+        ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
+        // 校验文件大小
+        long size = multipartFile.getSize();
+        final long ONE_MB = 1024 * 1024L;
+        ThrowUtils.throwIf(size > ONE_MB, ErrorCode.PARAMS_ERROR, "文件超过1Mb");
+        // 校验文件后缀
+        String originalFilename = multipartFile.getOriginalFilename();
+        String suffix = FileUtil.getSuffix(originalFilename);
+        final List<String> validFileSuffix = Arrays.asList("xlsx", "xls", "csv");
+        ThrowUtils.throwIf(!validFileSuffix.contains(suffix), ErrorCode.PARAMS_ERROR, "文件后缀非法");
+
+
+        User loginUser = userService.getLoginUser(request);
+
+
+        // 用户输入
+        StringBuilder userInput = new StringBuilder();
+        userInput.append("分析需求:").append("\n");
+        userInput.append(goal).append("\n");
+
+        if (StringUtils.isBlank(chartType)) {
+            genChartByAiRequest.setChartType("条形图");
+            chartType = genChartByAiRequest.getChartType();
+        }
+        userInput.append("图表类型:").append("\n");
+        userInput.append(chartType).append("\n");
+
+        userInput.append("原始数据:").append("\n");
+
+        // 压缩后的数据
+        String csvData = ExcelUtils.excelToCsv(multipartFile);
+        userInput.append(csvData).append("\n");
+
+
+        // 插入数据库
+        Chart chart = new Chart();
+        chart.setName(name);
+        chart.setGoal(goal);
+        chart.setChartData(csvData);
+        chart.setChartType(chartType);
+        chart.setStatus("wait");
+        chart.setUserId(loginUser.getId());
+        boolean saveResult = chartService.save(chart);
+        ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "图表保存失败");
+
+        biMessageProducer.sendMessage(String.valueOf(chart.getId()));
+
+        AiResponseVO aiResponseVO = new AiResponseVO();
+        aiResponseVO.setChartId(chart.getId());
+
+        return ResultUtils.success(aiResponseVO);
+    }
     private void handleChartUpdateError(long chartId,String execMessage) {
         Chart updateChart = new Chart();
         updateChart.setId(chartId);

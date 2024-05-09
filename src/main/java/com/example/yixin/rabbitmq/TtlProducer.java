@@ -1,4 +1,4 @@
-package com.example.yixin.mq;
+package com.example.yixin.rabbitmq;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
