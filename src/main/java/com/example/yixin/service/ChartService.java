@@ -9,5 +9,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
 * @createDate 2024-04-27 13:06:43
 */
 public interface ChartService extends IService<Chart> {
-
+    String KEY_CHART = "chartList";
 }

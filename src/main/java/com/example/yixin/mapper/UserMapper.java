@@ -2,6 +2,7 @@ package com.example.yixin.mapper;
 
 import com.example.yixin.model.entity.User;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
 
 /**
 * @author 亦-Nickname
@@ -10,7 +11,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 * @Entity generator.domain.User
 */
 public interface UserMapper extends BaseMapper<User> {
-
+    User findByIdUser(@Param("userAccount") String userAccount );
 }
 
 

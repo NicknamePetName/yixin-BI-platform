@@ -19,6 +19,9 @@ import java.util.List;
 */
 public interface UserService extends IService<User> {
 
+    String KEY_REGISTER = "userRegisterList";
+    String KEY_LOGIN = "userLoginList";
+
     /**
      * 用户注册
      *

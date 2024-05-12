@@ -33,8 +33,10 @@ import com.example.yixin.utils.SqlUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -43,6 +45,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 帖子接口
@@ -65,6 +68,9 @@ public class ChartController {
 
     @Autowired
     private BiMessageProducer biMessageProducer;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Resource
     private ChartService chartService;
@@ -95,6 +101,7 @@ public class ChartController {
 
         boolean result = chartService.save(chart);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        redisTemplate.opsForHash().delete(ChartService.KEY_CHART);
         long newChartId = chart.getId();
         return ResultUtils.success(newChartId);
     }
@@ -199,10 +206,19 @@ public class ChartController {
         chartQueryRequest.setUserId(loginUser.getId());
         long current = chartQueryRequest.getCurrent();
         long size = chartQueryRequest.getPageSize();
+
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
-        Page<Chart> chartPage = chartService.page(new Page<>(current, size),
-                getQueryWrapper(chartQueryRequest));
+        // redis 缓存查询成功
+        String hashKey = loginUser.getId() + "_" + current + "_" + size;
+        Page<Chart> chartPage = (Page<Chart>) redisTemplate.opsForHash().get(ChartService.KEY_CHART, hashKey);
+
+        if (chartPage == null) {
+            chartPage = chartService.page(new Page<>(current, size),
+                    getQueryWrapper(chartQueryRequest));
+            redisTemplate.opsForHash().put(ChartService.KEY_CHART, hashKey, chartPage);
+            redisTemplate.expire(ChartService.KEY_CHART, 2, TimeUnit.HOURS);
+        }
         return ResultUtils.success(chartPage);
     }
 
@@ -277,8 +293,7 @@ public class ChartController {
 //        String result = aiManager.doChat(modelID, userInput.toString());
 
         // 微软 azure openai 模型
-        String result = azureOpenAI.AzureOpenAIChat(userInput.toString());
-
+        String result = azureOpenAI.AzureOpenAIChat(userInput.toString(),loginUser.getId());
 
 
         String[] splits = result.split("【【【【【");
@@ -344,7 +359,7 @@ public class ChartController {
      */
     @PostMapping("/gen/async")
     public BaseResponse<AiResponseVO> getChartByAiAsync(@RequestPart("file") MultipartFile multipartFile,
-                                                   GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
+                                                        GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
         String name = genChartByAiRequest.getName();
         String goal = genChartByAiRequest.getGoal();
         String chartType = genChartByAiRequest.getChartType();
@@ -410,9 +425,9 @@ public class ChartController {
             }
 
             // 知识星球 AI 模型
-            //String result = aiManager.doChat(modelID, userInput.toString());
+            //String result = aiManager.doChat(modelID, userInput.toString(),loginUser.getId());
             // 微软 azure openai 模型
-            String result = azureOpenAI.AzureOpenAIChat(userInput.toString());
+            String result = azureOpenAI.AzureOpenAIChat(userInput.toString(),loginUser.getId());
             String[] splits = result.split("【【【【【");
             if (splits.length != 3) {
                 handleChartUpdateError(chart.getId(), "AI 生成错误");
@@ -450,7 +465,7 @@ public class ChartController {
      */
     @PostMapping("/gen/async/mq")
     public BaseResponse<AiResponseVO> getChartByAiAsyncMq(@RequestPart("file") MultipartFile multipartFile,
-                                                        GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
+                                                          GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
         String name = genChartByAiRequest.getName();
         String goal = genChartByAiRequest.getGoal();
         String chartType = genChartByAiRequest.getChartType();
@@ -501,6 +516,7 @@ public class ChartController {
         boolean saveResult = chartService.save(chart);
         ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "图表保存失败");
 
+        // 消息队列，发送消息
         biMessageProducer.sendMessage(String.valueOf(chart.getId()));
 
         AiResponseVO aiResponseVO = new AiResponseVO();
@@ -508,7 +524,13 @@ public class ChartController {
 
         return ResultUtils.success(aiResponseVO);
     }
-    private void handleChartUpdateError(long chartId,String execMessage) {
+
+    /**
+     * 标记更新图表状态失败
+     * @param chartId
+     * @param execMessage
+     */
+    private void handleChartUpdateError(long chartId, String execMessage) {
         Chart updateChart = new Chart();
         updateChart.setId(chartId);
         updateChart.setStatus("failed");

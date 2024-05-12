@@ -1,5 +1,6 @@
 package com.example.yixin.mq;
 
+import com.example.yixin.constant.BiMqConstant;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;

@@ -1,4 +1,4 @@
-package com.example.yixin.mq;
+package com.example.yixin.constant;
 
 public interface BiMqConstant {
 

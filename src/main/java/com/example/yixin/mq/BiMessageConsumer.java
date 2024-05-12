@@ -2,6 +2,7 @@ package com.example.yixin.mq;
 
 import com.example.yixin.api.AzureOpenAI;
 import com.example.yixin.common.ErrorCode;
+import com.example.yixin.constant.BiMqConstant;
 import com.example.yixin.exception.BusinessException;
 import com.example.yixin.manager.AiManager;
 import com.example.yixin.model.entity.Chart;
@@ -63,7 +64,7 @@ public class BiMessageConsumer {
         // 知识星球 AI 模型
 //        String result = aiManager.doChat(CommonConstant.BI_MODEL_ID, buildUserInput(chart));
         // 微软 azure openai 模型
-        String result = azureOpenAI.AzureOpenAIChat(buildUserInput(chart));
+        String result = azureOpenAI.AzureOpenAIChat(buildUserInput(chart),chart.getUserId());
         String[] splits = result.split("【【【【【");
         if (splits.length != 3) {
             channel.basicNack(deliverTag, false, false);

@@ -19,8 +19,6 @@ public class InitMq {
             Connection connection = factory.newConnection();
             Channel channel = connection.createChannel();
 
-
-
             channel.exchangeDeclare(EXCHANGE_NAME, "direct");
             // 创建队列
             // String queueName = channel.queueDeclare().getQueue();

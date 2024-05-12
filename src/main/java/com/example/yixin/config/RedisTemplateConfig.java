@@ -26,10 +26,10 @@ public class RedisTemplateConfig {
     @Autowired
     private RedisTemplate redisTemplate;
 
-//    @PostConstruct
-//    public void init() {
-//        redisTemplateInit();
-//    }
+    @PostConstruct
+    public void init() {
+        redisTemplateInit();
+    }
 
     @Bean
     public RedisTemplate redisTemplateInit() {

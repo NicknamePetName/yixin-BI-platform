@@ -8,6 +8,8 @@ import com.azure.ai.openai.models.ChatCompletionsOptions;
 import com.azure.ai.openai.models.ChatMessage;
 import com.azure.ai.openai.models.ChatRole;
 import com.azure.core.credential.AzureKeyCredential;
+import com.example.yixin.manager.RedisLimiterManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,10 @@ import java.util.stream.Collectors;
 
 @Service
 public class AzureOpenAI {
+
+    @Autowired
+    private RedisLimiterManager redisLimiterManager;
+
     @Value("${azure.openai.api.key}")
     private String OPENAI_API_KEY;
     @Value("${azure.openai.endpoint}")
@@ -38,7 +44,11 @@ public class AzureOpenAI {
             "{明确的数据分析结论、越详细越好，不要生成多余的注释}";
 
 
-    public String AzureOpenAIChat(String userMessage) {
+    public String AzureOpenAIChat(String userMessage,Long userId) {
+        // 限流，每天三十次 redissonClient.getAtomicLong(now)
+        redisLimiterManager.getAutoIncrId();
+        // 限流，每个用户每秒只能访问两次
+        redisLimiterManager.userCurrentLimiting(String.valueOf(userId));
 
         OpenAIClient client = new OpenAIClientBuilder()
                 .endpoint(ENDPOINT)
@@ -64,4 +74,7 @@ public class AzureOpenAI {
 
         return result;
     }
+
+
+
 }

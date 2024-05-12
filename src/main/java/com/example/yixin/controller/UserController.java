@@ -25,7 +25,10 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,6 +50,13 @@ public class UserController {
 
     @Resource
     private WxOpenConfig wxOpenConfig;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    @Autowired
+    private RedissonClient redissonClient;
+
 
     // region 登录相关
 
@@ -156,7 +166,10 @@ public class UserController {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
+        User user = userService.getById(deleteRequest.getId());
         boolean b = userService.removeById(deleteRequest.getId());
+        redisTemplate.opsForHash().delete(UserService.KEY_LOGIN, user.getUserAccount());
+        redisTemplate.opsForHash().delete(UserService.KEY_REGISTER, user.getUserAccount());
         return ResultUtils.success(b);
     }
 
@@ -178,6 +191,7 @@ public class UserController {
         BeanUtils.copyProperties(userUpdateRequest, user);
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        redisTemplate.opsForHash().put(UserService.KEY_LOGIN, user.getUserAccount(), user);
         return ResultUtils.success(true);
     }
 
@@ -277,6 +291,7 @@ public class UserController {
         user.setId(loginUser.getId());
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        redisTemplate.opsForHash().put(UserService.KEY_LOGIN, user.getUserAccount(), user);
         return ResultUtils.success(true);
     }
 }
