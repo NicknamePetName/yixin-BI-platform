@@ -146,4 +146,4 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 
 # Ignore application.yml file in resources directory
-src/main/resources/application.yml
+#src/main/resources/application.yml
