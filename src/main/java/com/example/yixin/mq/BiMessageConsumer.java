@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +30,9 @@ public class BiMessageConsumer {
 
     @Autowired
     private AiManager aiManager;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
 
     // 指定程序监听的消息队列和确认机制
@@ -60,6 +64,7 @@ public class BiMessageConsumer {
             handleChartUpdateError(chart.getId(), "更新图表为执行中状态失败");
             return;
         }
+        
 
         // 知识星球 AI 模型
 //        String result = aiManager.doChat(CommonConstant.BI_MODEL_ID, buildUserInput(chart));
@@ -85,6 +90,7 @@ public class BiMessageConsumer {
             channel.basicNack(deliverTag, false, false);
             handleChartUpdateError(chart.getId(), "更新图表为成功状态失败");
         }
+        
 
         log.error("receiveMessage message = {}",message);
         channel.basicAck(deliverTag, false);
@@ -125,6 +131,7 @@ public class BiMessageConsumer {
         if (!isSuccessful) {
             log.error("更新图表、状态失败" + chartId + "," + execMessage);
         }
+        
     }
 
 }

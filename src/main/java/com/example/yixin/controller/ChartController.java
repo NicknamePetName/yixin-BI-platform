@@ -101,7 +101,7 @@ public class ChartController {
 
         boolean result = chartService.save(chart);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        redisTemplate.opsForHash().delete(ChartService.KEY_CHART);
+        
         long newChartId = chart.getId();
         return ResultUtils.success(newChartId);
     }
@@ -211,14 +211,8 @@ public class ChartController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
         // redis 缓存查询成功
         String hashKey = loginUser.getId() + "_" + current + "_" + size;
-        Page<Chart> chartPage = (Page<Chart>) redisTemplate.opsForHash().get(ChartService.KEY_CHART, hashKey);
-
-        if (chartPage == null) {
-            chartPage = chartService.page(new Page<>(current, size),
-                    getQueryWrapper(chartQueryRequest));
-            redisTemplate.opsForHash().put(ChartService.KEY_CHART, hashKey, chartPage);
-            redisTemplate.expire(ChartService.KEY_CHART, 2, TimeUnit.HOURS);
-        }
+        Page<Chart> chartPage = chartService.page(new Page<>(current, size),
+                getQueryWrapper(chartQueryRequest));
         return ResultUtils.success(chartPage);
     }
 
@@ -302,7 +296,7 @@ public class ChartController {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Ai 生成错误");
         }
 
-        String genChart = splits[1].trim();
+        String genChart = splits[1].trim().replace("'", "\"");
         String genResult = splits[2].trim();
         // 插入数据库
         Chart chart = new Chart();
@@ -316,6 +310,7 @@ public class ChartController {
         chart.setUserId(loginUser.getId());
         boolean saveResult = chartService.save(chart);
         ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "图表保存失败");
+        
         AiResponseVO aiResponseVO = new AiResponseVO();
         aiResponseVO.setGenChart(genChart);
         aiResponseVO.setGenResult(genResult);
@@ -360,6 +355,8 @@ public class ChartController {
     @PostMapping("/gen/async")
     public BaseResponse<AiResponseVO> getChartByAiAsync(@RequestPart("file") MultipartFile multipartFile,
                                                         GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
+        
+
         String name = genChartByAiRequest.getName();
         String goal = genChartByAiRequest.getGoal();
         String chartType = genChartByAiRequest.getChartType();
@@ -410,6 +407,7 @@ public class ChartController {
         chart.setUserId(loginUser.getId());
         boolean saveResult = chartService.save(chart);
         ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "图表保存失败");
+        
 
         // todo 处理任务队列满了后，抛异常
         CompletableFuture.runAsync(() -> {
@@ -423,6 +421,7 @@ public class ChartController {
                 handleChartUpdateError(chart.getId(), "更新图表为执行中状态失败");
                 return;
             }
+            
 
             // 知识星球 AI 模型
             //String result = aiManager.doChat(modelID, userInput.toString(),loginUser.getId());
@@ -446,6 +445,7 @@ public class ChartController {
             if (!isTrue) {
                 handleChartUpdateError(chart.getId(), "更新图表为成功状态失败");
             }
+            
         }, threadPoolExecutor);
 
 
@@ -516,6 +516,7 @@ public class ChartController {
         boolean saveResult = chartService.save(chart);
         ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "图表保存失败");
 
+
         // 消息队列，发送消息
         biMessageProducer.sendMessage(String.valueOf(chart.getId()));
 
@@ -539,6 +540,7 @@ public class ChartController {
         if (!isSuccessful) {
             log.error("更新图表、状态失败" + chartId + "," + execMessage);
         }
+        
     }
 
     /**
